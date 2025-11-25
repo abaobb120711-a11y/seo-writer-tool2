@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI SEO Writer Tool</title>
+  <title>AI SEO 文案生成工具</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -11,7 +11,7 @@
   <div class="max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-8">
     <h1 class="text-3xl font-bold mb-6 text-center">AI SEO 文案生成工具</h1>
 
-    <!-- API Key -->
+    <!-- API Key Input -->
     <div class="mb-6">
       <label class="font-medium">API Key（可选）</label>
       <input id="apiKey" type="text" placeholder="不填则使用默认 API" 
@@ -67,16 +67,10 @@
         placeholder="如果填入，将追加到默认提示词后面"></textarea>
     </div>
 
-    <!-- Button -->
-    <button onclick="generateSEO()" 
-      class="w-full bg-blue-600 text-white p-4 rounded-lg text-lg font-bold hover:bg-blue-700">
-      生成文案
-    </button>
+    <!-- Generate Button -->
+    <button onclick="generateSEO()" class="w-full bg-blue-600 text-white p-4 rounded-lg text-lg font-bold hover:bg-blue-700">生成文案</button>
 
-    <!-- Error Message -->
-    <p id="errorBox" class="mt-4 text-red-600 font-medium hidden"></p>
-
-    <!-- Output -->
+    <!-- Output Table -->
     <div id="output" class="mt-10 hidden">
       <h2 class="text-2xl font-bold mb-4">生成结果</h2>
       <table class="w-full table-auto border-collapse border border-gray-300 text-sm">
@@ -95,65 +89,59 @@
   </div>
 
 <script>
-const WORKER_URL = "https://seo-writer-worker.baoyigou43.workers.dev";
-
 async function generateSEO() {
-  const section = document.getElementById("sectionType").value;
-  const required = document.getElementById("requiredKeywords").value.trim();
-  const optional = document.getElementById("optionalKeywords").value.split(",");
-  const wordCount = document.getElementById("wordCount").value;
-  const charCount = document.getElementById("charCount").value;
-  const customPrompt = document.getElementById("customPrompt").value.trim();
-  const apiKey = document.getElementById("apiKey").value.trim();
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const sectionType = document.getElementById('sectionType').value;
+  const requiredKeywords = document.getElementById('requiredKeywords').value.trim();
+  const optionalKeywords = document.getElementById('optionalKeywords').value.split(',').map(k => k.trim()).filter(k => k);
+  const wordCount = Number(document.getElementById('wordCount').value);
+  const charCount = Number(document.getElementById('charCount').value);
+  const customPrompt = document.getElementById('customPrompt').value.trim();
 
-  const errorBox = document.getElementById("errorBox");
-
-  if (!required) {
-    errorBox.textContent = "❌ 必须埋入关键词不能为空";
-    errorBox.classList.remove("hidden");
+  if (!requiredKeywords) {
+    alert('必须埋入关键词不能为空');
     return;
   }
-  errorBox.classList.add("hidden");
 
-  try {
-    const res = await fetch(WORKER_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        apiKey: apiKey || null,
-        section,
-        requiredKeywords: required,
-        optionalKeywords: optional,
-        wordCount: wordCount || null,
-        charCount: charCount || null,
-        customPrompt
-      }),
-    });
+  const payload = {
+    apiKey: apiKey || null,
+    section: sectionType,
+    requiredKeywords,
+    optionalKeywords,
+    targetWordCount: wordCount || null,
+    targetCharCount: charCount || null,
+    customInstructions: customPrompt
+  };
 
-    const data = await res.json();
+  const res = await fetch("https://seo-writer-worker.baoyigou43.workers.dev", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
 
-    if (data.error) {
-      errorBox.textContent = "❌ 错误：" + data.error;
-      errorBox.classList.remove("hidden");
-      return;
-    }
+  const data = await res.json();
+  const md = data.output_markdown || "";
 
-    document.getElementById("output").classList.remove("hidden");
+  // 解析 markdown 表格
+  const rows = md.split("\n").filter(line => line.startsWith("|")).slice(2);
 
-    document.getElementById("outputBody").innerHTML = `
-      <tr>
-        <td class='border p-2 whitespace-pre-line'>${data.english}</td>
-        <td class='border p-2 whitespace-pre-line'>${data.chinese}</td>
-        <td class='border p-2'>${data.used_keywords.join(", ")}</td>
-        <td class='border p-2'>${data.word_count}</td>
-        <td class='border p-2'>${data.char_count}</td>
-      </tr>`;
-  } catch (e) {
-    errorBox.textContent = "❌ 网络或 Worker 错误：" + e.message;
-    errorBox.classList.remove("hidden");
-  }
+  const parsed = rows.map(line => line.split("|").map(c => c.trim())).map(col => col[2]);
+
+  document.getElementById("output").classList.remove("hidden");
+
+  const rowHtml = `
+    <tr>
+      <td class='border p-2 whitespace-pre-line'>${parsed[0]}</td>
+      <td class='border p-2 whitespace-pre-line'>${parsed[1]}</td>
+      <td class='border p-2'>${parsed[2]}</td>
+      <td class='border p-2'>${parsed[3]}</td>
+      <td class='border p-2'>${parsed[4]}</td>
+    </tr>`;
+
+  document.getElementById("outputBody").innerHTML = rowHtml;
 }
 </script>
 
 </body>
 </html>
+
