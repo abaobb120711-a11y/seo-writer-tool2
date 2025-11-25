@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI SEO Writer Tool</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen p-6">
+  <div class="max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-8">
+    <h1 class="text-3xl font-bold mb-6 text-center">AI SEO 文案生成工具</h1>
+
+    <div class="mb-6">
+      <label class="font-medium">API Key（可选）</label>
+      <input id="apiKey" type="text" placeholder="不填则使用默认 API" 
+        class="w-full mt-2 p-3 border rounded-lg" />
+    </div>
+
+    <div class="mb-6">
+      <label class="font-medium">选择 Section 类型（必选）</label>
+      <select id="sectionType" class="w-full mt-2 p-3 border rounded-lg">
+        <option value="hero">Hero Section</option>
+        <option value="what-is">What Is Section</option>
+        <option value="showcase">Showcase Section</option>
+        <option value="feature">Feature Section</option>
+        <option value="how-to-use">How To Use Section</option>
+        <option value="benefit-for-who">Benefit For Who Section</option>
+        <option value="user-review">User Review Section</option>
+        <option value="faq">FAQ Section</option>
+        <option value="cta">CTA Section</option>
+      </select>
+    </div>
+
+    <div class="mb-6">
+      <label class="font-medium">必须埋入的关键词（必填）</label>
+      <input id="requiredKeywords" type="text" placeholder="例如：ai coloring pages, generator"
+        class="w-full mt-2 p-3 border rounded-lg" />
+    </div>
+
+    <div class="mb-6">
+      <label class="font-medium">可选关键词（逗号分隔）</label>
+      <input id="optionalKeywords" type="text" placeholder="例如：free coloring pages, printable coloring book"
+        class="w-full mt-2 p-3 border rounded-lg" />
+    </div>
+
+    <div class="mb-6">
+      <label class="font-medium">输出文案字数（可选）</label>
+      <input id="wordCount" type="number" placeholder="例如：150" class="w-full mt-2 p-3 border rounded-lg" />
+    </div>
+
+    <div class="mb-6">
+      <label class="font-medium">输出文案字符数（可选）</label>
+      <input id="charCount" type="number" placeholder="例如：800" class="w-full mt-2 p-3 border rounded-lg" />
+    </div>
+
+    <div class="mb-6">
+      <label class="font-medium">自定义提示词（可选）</label>
+      <textarea id="customPrompt" class="w-full mt-2 p-3 border rounded-lg" rows="4"
+        placeholder="如果填入，将追加到默认提示词后面"></textarea>
+    </div>
+
+    <button onclick="generateSEO()" class="w-full bg-blue-600 text-white p-4 rounded-lg text-lg font-bold hover:bg-blue-700">
+      生成文案
+    </button>
+
+    <div id="output" class="mt-10 hidden">
+      <h2 class="text-2xl font-bold mb-4">生成结果</h2>
+      <table class="w-full table-auto border-collapse border border-gray-300 text-sm">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="border p-2">英文文案</th>
+            <th class="border p-2">中文翻译</th>
+            <th class="border p-2">埋入关键词</th>
+            <th class="border p-2">字数</th>
+            <th class="border p-2">字符数</th>
+          </tr>
+        </thead>
+        <tbody id="outputBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+async function generateSEO() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const sectionType = document.getElementById('sectionType').value;
+  const requiredKeywords = document.getElementById('requiredKeywords').value.trim();
+  const optionalKeywords = document.getElementById('optionalKeywords').value.split(',').map(k => k.trim()).filter(k => k);
+  const wordCount = Number(document.getElementById('wordCount').value);
+  const charCount = Number(document.getElementById('charCount').value);
+  const customPrompt = document.getElementById('customPrompt').value.trim();
+
+  if (!requiredKeywords) {
+    alert('必须埋入关键词不能为空');
+    return;
+  }
+
+  const payload = {
+    apiKey: apiKey || null,
+    section: sectionType,
+    requiredKeywords,
+    optionalKeywords,
+    wordCount: wordCount || null,
+    charCount: charCount || null,
+    customPrompt: customPrompt
+  };
+
+  const res = await fetch("https://seo-writer-worker.baoyigou43.workers.dev", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+
+  document.getElementById("output").classList.remove("hidden");
+
+  const row = `
+    <tr>
+      <td class='border p-2 whitespace-pre-line'>${data.english}</td>
+      <td class='border p-2 whitespace-pre-line'>${data.chinese}</td>
+      <td class='border p-2'>${data.used_keywords.join(', ')}</td>
+      <td class='border p-2'>${data.word_count}</td>
+      <td class='border p-2'>${data.char_count}</td>
+    </tr>`;
+
+  document.getElementById("outputBody").innerHTML = row;
+}
+</script>
+
+</body>
+</html>
